@@ -1,0 +1,54 @@
+stages:
+  - test
+  - build
+  - deploy
+
+default:
+  tags:
+    - ushorten_web
+
+test:
+  stage: test
+  image: node:20.5.1-alpine3.17
+  # before_script:
+  #   - npm ci
+  script:
+    - echo "no available tests"
+
+
+build:
+  stage: build
+  only:
+    - main
+  image: docker:20.10.23
+  services:
+    - docker:20.10.23-dind
+  before_script:
+    - apk update
+    - apk upgrade
+    - apk add --update alpine-sdk
+    - apk add --no-cache bash git openssh make cmake
+    - cp $ENV_VARS .env
+  script:
+    - make login
+    - make build
+    - make push
+    - make latest
+
+deploy:
+  stage: deploy
+  only:
+    - main
+  image: tmaier/docker-compose:latest
+  services:
+    - docker:20.10.23-dind
+  before_script:
+    - apk update
+    - apk upgrade
+    - apk add --update alpine-sdk
+    - apk add --no-cache bash git openssh make cmake
+    - cp $ENV_VARS .env
+  script:
+    - make login
+    - make remove
+    - make start
